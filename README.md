@@ -57,4 +57,5 @@ The visual layer uses **CSS Injection** to achieve a modern, futuristic look:
 
 ## 🚀 Live Demo
 
-**[Experience Pulse by Vignesh Cheni]**
+
+**https://vignesh-tech-pulse-news-engine.streamlit.app/**
