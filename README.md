@@ -26,17 +26,16 @@ Pulse acts as a consumer for the **NewsAPI data stream**, processing headlines f
 ### 2. 🤖 Machine Learning Logic (Scikit-Learn)
 The core of the discovery engine relies on two mathematical models:
 
-* **TF-IDF Vectorization:** *(Term Frequency-Inverse Document Frequency)* This model calculates the statistical weight of every term in the data stream. It automatically suppresses "noise" words and amplifies **"signal"** terms (e.g., *Quantum Computing* or *Solid-state battery*).
-* **Cosine Similarity:** The engine maps the user’s query into a **multi-dimensional vector space** and calculates the mathematical distance between that query and the news articles to find the closest contextual matches.
-
-
-
+* **TF-IDF Vectorization:** (Via `sklearn.feature_extraction.text`) This model calculates the statistical weight of every term in the data stream. It automatically suppresses "noise" words and amplifies **"signal"** terms (e.g., *Quantum Computing* or *SpaceX Starship*).
+* **Cosine Similarity:** (Via `sklearn.metrics.pairwise`) The engine maps the user’s query into a **multi-dimensional vector space** and calculates the mathematical distance between that query and the news articles to find the closest contextual matches.
 ---
 
 ## 🧠 Under the Hood: The Data Flow
 
 ### **Phase 1: Data Retrieval** 📥
-When a user interacts with the interface, the app triggers a data request. To ensure a **Zero-Friction experience**, I configured the app to pull my developer credentials from an **encrypted environment vault**. The user sees the results instantly without needing their own API key.
+When a user interacts with the interface, the app triggers a data request:
+* **Zero-Friction experience:** Configured the app to pull developer credentials from an **encrypted environment vault (Streamlit Secrets)**.
+* **Adaptive Data Windowing:** Implemented a dynamic **"Sliding 30-day Window"** logic. Since the NewsAPI Free Tier restricts access to the last 30 days of data, the engine automatically calculates the furthest allowable date to prevent `422 Unprocessable Entity` errors, ensuring 100% uptime for the demo.
 
 ### **Phase 2: Text Processing & Scoring** 📊
 The data is processed through our **ML logic**:
@@ -45,17 +44,14 @@ The data is processed through our **ML logic**:
 2.  **Vector Mapping:** Every headline is converted into a **numerical vector**.
 3.  **Similarity Calculation:** The engine computes a **Relevance Score** based on the vector's angle. This allows Pulse to surface articles that are contextually related even if they don't share the exact keywords typed by the user.
 
-
-
 ### **Phase 3: High-Contrast Interface** 🎨
 The visual layer uses **CSS Injection** to achieve a modern, futuristic look:
 
 * **Backdrop Filter:** `blur(15px)` for a frosted-glass aesthetic.
-* **Responsive Grid:** Custom **Flexbox CSS** to ensure trending buttons stay perfectly aligned across mobile and desktop.
+* **Responsive Grid:** Custom **Flexbox CSS** to ensure trending buttons stay perfectly aligned across mobile and desktop devices.
 
 ---
 
 ## 🚀 Live Demo
 
-
-**https://vignesh-tech-pulse-news-engine.streamlit.app/**
+**[Explore Pulse Live →](https://vignesh-tech-pulse-news-engine.streamlit.app/)**
