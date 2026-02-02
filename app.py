@@ -7,14 +7,14 @@ to rank results based on user relevance.
 """
 
 import streamlit as st, requests
+import datetime
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # --- 1. APP CONFIGURATION & STYLING ---
-# Set browser tab metadata and page centering
 st.set_page_config(page_title="Pulse", page_icon="📡", layout="centered")
 
-# Security Note: In a production environment, use st.secrets or environment variables
+# Security: Fetching key from Streamlit Secrets
 MY_API_KEY = st.secrets["NEWS_API_KEY"]
 
 # Custom CSS for Glassmorphism UI components
@@ -56,28 +56,42 @@ if 'topic' not in st.session_state:
 # Create a 4-column grid for the trending buttons
 cols = st.columns(4)
 for i, topic in enumerate(trends):
-    # The modulo (%) operator ensures buttons wrap to the next row every 4 items
     if cols[i % 4].button(topic, use_container_width=True, key=f"t_{i}"):
         st.session_state.topic = topic
 
-# Search bar linked to session state for automatic updates when buttons are clicked
+# Search bar linked to session state
 user_input = st.text_input("", value=st.session_state.topic, placeholder="Search specific 2026 trends...")
 
 # --- 3. DATA FETCHING & SEMANTIC ANALYSIS ENGINE ---
+
+# GLOBAL SCOPE DATE LOGIC: Define these here so the Sidebar (Section 4) can always access them
+today = datetime.date.today()
+start_date = today - datetime.timedelta(days=30)
+
+# Ensure our search window stays within the year 2026
+if start_date.year < 2026:
+    start_date = today.replace(month=1, day=1)
+
 if user_input:
-    # Construct API request for news from the year 2026
-    url = f"https://newsapi.org/v2/everything?q={user_input}&from=2026-01-01&sortBy=relevancy&language=en&apiKey={MY_API_KEY}"
+    url = "https://newsapi.org/v2/everything"
+    params = {
+        "q": user_input,
+        "from": start_date.isoformat(),
+        "sortBy": "relevancy",
+        "language": "en",
+        "apiKey": MY_API_KEY
+    }
     
     with st.spinner("AI Analysis in progress..."):
         try:
-            data = requests.get(url).json()
+            response = requests.get(url, params=params)
+            data = response.json()
+
             if data.get("status") == "ok" and data.get("articles"):
                 articles = data['articles']
                 titles = [a['title'] for a in articles]
                 
-                # Semantic Scoring Logic:
-                # 1. TfidfVectorizer converts text to numerical 'importance' vectors
-                # 2. cosine_similarity measures the mathematical 'angle' between user query and titles
+                # TF-IDF & Cosine Similarity Pipeline
                 vec = TfidfVectorizer(stop_words='english')
                 mtx = vec.fit_transform([user_input] + titles)
                 scores = cosine_similarity(mtx[0:1], mtx[1:]).flatten()
@@ -85,7 +99,9 @@ if user_input:
                 st.markdown(f"### Results for: **{user_input}**")
                 
                 # Display Top 5 matches based on highest similarity score
-                for i in scores.argsort()[-5:][::-1]:
+                top_indices = scores.argsort()[-5:][::-1]
+                
+                for i in top_indices:
                     art = articles[i]
                     st.markdown(f"""<div class="news-card">
                         <span class="score-badge">MATCH: {scores[i]*100:.1f}%</span>
@@ -93,9 +109,20 @@ if user_input:
                         <p style="color: #cbd5e1;">{(art['description'] or 'No summary available')[:200]}...</p>
                         <a href="{art['url']}" target="_blank" style="color: #38bdf8; font-weight: bold; text-decoration: none;">Read More →</a>
                     </div>""", unsafe_allow_html=True)
+            
+            elif data.get("status") == "error":
+                st.error(f"API Error: {data.get('message')}")
             else: 
-                st.error("No 2026 news articles found for this specific query.")
+                st.warning(f"No news found for '{user_input}' in the last 30 days.")
+
         except Exception as e: 
-            st.error(f"Connection error: Unable to reach News API. ({e})")
+            st.error(f"Connection error: {e}")
 else:
     st.markdown("<br><p style='text-align:center; color:#94a3b8;'>Select a trending topic above or type a keyword to begin.</p>", unsafe_allow_html=True)
+
+# --- 4. OPTIONAL FOOTER ---
+with st.sidebar:
+    st.title("About Pulse")
+    st.info("Pulse uses Scikit-Learn to perform real-time semantic analysis.")
+    # start_date and today are now guaranteed to be defined above
+    st.caption(f"Data Window: {start_date.strftime('%b %d')} - {today.strftime('%b %d, %Y')}")
